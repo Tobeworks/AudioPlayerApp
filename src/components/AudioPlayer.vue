@@ -37,15 +37,8 @@ const tracks = [
         coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
     },
     {
-        id: 3,
-        title: "03 - Settlers",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/03_settlers.m4a",
-        coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
-    },
-    {
         id: 4,
-        title: "03 - Settlers (Alternative)",
+        title: "03 - Settlers",
         artist: "Logic Moon",
         url: "https://tracks.logic-moon.de/audio/03_settlers02.m4a",
         coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
@@ -65,50 +58,29 @@ const tracks = [
         coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
     },
     {
-        id: 7,
-        title: "06 - Meld",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/06_meld.m4a",
-        coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
-    },
-    {
         id: 8,
-        title: "06 - Meld (Alternative)",
+        title: "06 - Meld",
         artist: "Logic Moon",
         url: "https://tracks.logic-moon.de/audio/06_meld_02.m4a",
         coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
     },
     {
-        id: 9,
-        title: "07 - Tranquility",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/07_tranqility.m4a",
-        coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
-    },
-    {
         id: 10,
-        title: "07 - Tranquility (Alternative)",
+        title: "07 - Tranquility",
         artist: "Logic Moon",
         url: "https://tracks.logic-moon.de/audio/07_tranqility_02.m4a",
         coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
     },
     {
-        id: 11,
-        title: "08 - Artifacts",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/08_artifacts.m4a",
-        coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
-    },
-    {
         id: 12,
-        title: "08 - Artifacts (Alternative)",
+        title: "08 - Artifacts",
         artist: "Logic Moon",
         url: "https://tracks.logic-moon.de/audio/08_artifacts_02.m4a",
         coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
     },
     {
         id: 13,
-        title: "Track 01",
+        title: "Thw Wanderers",
         artist: "Logic Moon",
         url: "https://tracks.logic-moon.de/audio/track_01.m4a",
         coverImage: "https://via.placeholder.com/400x400?text=Logic+Moon"
