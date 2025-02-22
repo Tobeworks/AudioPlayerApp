@@ -1,8 +1,15 @@
+<!-- components/AudioPlayer/AudioPlayer.vue (Hauptkomponente) -->
 <template>
-    <div ref="playerRef" class="fixed z-50 select-none" :style="{ left: playerPosition.x + 'px', top: playerPosition.y + 'px', maxWidth: '480px' }" @mousedown="startDrag">
-        <div class="relative backdrop-blur-md bg-gray-900/60 rounded-2xl shadow-lg border border-white/10 overflow-hidden transition-all duration-500 ease-in-out" :class="{ 'w-96 h-[70px]': isCollapsed, 'w-[480px]': !isCollapsed }">
+    <div ref="playerRef" class="fixed z-50 select-none" :class="{ 'w-full top-0 left-0': isMobile, 'cursor-grab active:cursor-grabbing': isDragging }" :style="isMobile ? {} : { left: playerPosition.x + 'px', top: playerPosition.y + 'px', maxWidth: '480px' }" @mousedown="startDrag">
 
-            <!-- Collapse toggle - gleiche Position für beide Zustände -->
+        <div class="relative backdrop-blur-md bg-gray-900/60 rounded-lg md:rounded-2xl shadow-lg border border-white/10 overflow-hidden transition-all duration-500 ease-in-out" :class="{
+            'w-full h-[70px] rounded-b-none': isMobile && isCollapsed,
+            'w-full h-auto': isMobile && !isCollapsed,
+            'w-96 h-[70px]': !isMobile && isCollapsed,
+            'w-[480px]': !isMobile && !isCollapsed
+        }">
+
+            <!-- Collapse toggle button -->
             <div class="absolute top-5 right-3 cursor-pointer z-10 p-2 rounded-full bg-white/10 flex items-center justify-center hover:bg-white/20" @click.stop="toggleCollapse">
                 <ChevronDown v-if="!isCollapsed" size="12" class="text-white" />
                 <ChevronUp v-else size="12" class="text-white" />
@@ -22,117 +29,20 @@
                 <p class="mt-4 text-white text-center">Tracks werden geladen...</p>
             </div>
 
-            <!-- Playlist Overlay -->
-            <div v-if="isPlaylistOpen" class="absolute inset-0 z-20 flex justify-center items-center bg-black/70 backdrop-blur-md p-4">
-                <div class="bg-gray-900/70 backdrop-blur-md rounded-2xl shadow-lg border border-white/10 p-4 w-full max-w-md max-h-[400px] overflow-y-auto">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-bold text-white">Playlist</h3>
-                        <button @click.stop="togglePlaylist" class="text-gray-400 hover:text-white">
-                            <X class="h-6 w-6" />
-                        </button>
-                    </div>
-                    <ul class="space-y-2">
-                        <li v-for="(track, index) in tracks" :key="track.id" @click.stop="selectTrack(index)" :class="{ 'bg-indigo-800 bg-opacity-50': currentTrackIndex === index }" class="flex items-center p-2 rounded-md hover:bg-indigo-700/50 cursor-pointer transition-colors">
-                            <div class="w-8 h-8 flex items-center justify-center mr-3">
-                                <span v-if="currentTrackIndex !== index" class="text-gray-400">{{ index + 1 }}</span>
-                                <Play v-else size="16" class="text-indigo-400" />
-                            </div>
-                            <div class="flex-grow">
-                                <p class="font-medium text-white">{{ track.title }}</p>
-                                <p class="text-sm text-gray-400">{{ track.artist }}</p>
-                            </div>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
             <!-- Main Player UI - Only visible when not collapsed -->
-            <div v-if="!isCollapsed && !error && !(isLoading && tracks.length === 0)" class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <button @click.stop="togglePlaylist" class="text-white hover:text-indigo-300 transition-colors p-2 rounded-full hover:bg-white/10">
-                        <Menu class="w-5 h-5" />
-                    </button>
-                    <h2 class="text-xl font-bold text-white">Logic Moon</h2>
-                    <div class="w-9 h-9"><!-- Spacer für symmetrisches Layout --></div>
-                </div>
-
-                <div class="flex justify-center mb-6">
-                    <div class="relative w-48 h-48 rounded-lg overflow-hidden shadow-[0_0_20px_rgba(99,102,241,0.4)]">
-                        <img :src="currentTrack.coverImage" alt="Album Cover" class="w-full h-full object-cover">
-                        <div v-if="isLoading" class="absolute inset-0 flex items-center justify-center bg-black/50">
-                            <div class="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-4 text-center">
-                    <h3 class="text-lg font-bold text-white">{{ currentTrack.title }}</h3>
-                    <p class="text-sm text-indigo-300">{{ currentTrack.artist }}</p>
-                </div>
-
-                <!-- Progress bar -->
-                <div class="relative h-2 bg-white/20 rounded-full mb-2 cursor-pointer" @click.stop="seekAudio">
-                    <div class="absolute top-0 left-0 h-full bg-indigo-500 rounded-full" :style="{ width: progressPercentage + '%' }"></div>
-                </div>
-
-                <!-- Time display -->
-                <div class="flex justify-between text-sm text-gray-300 mb-4">
-                    <span>{{ formatTime(currentTime) }}</span>
-                    <span>{{ formatTime(duration) }}</span>
-                </div>
-
-                <!-- Controls -->
-                <div class="flex justify-center items-center mb-6">
-                    <button @click.stop="toggleShuffle" :class="{ 'text-indigo-400': isShuffleEnabled, 'text-gray-300': !isShuffleEnabled }" class="hover:text-white mx-3 transition-colors">
-                        <Shuffle size="20" />
-                    </button>
-
-                    <button @click.stop="skipBack" class="text-white hover:text-indigo-300 mx-3 transition-colors">
-                        <SkipBack size="24" />
-                    </button>
-
-                    <button @click.stop="togglePlay" class="bg-indigo-500/70 hover:bg-indigo-500/90 text-white rounded-full w-14 h-14 flex items-center justify-center mx-3 shadow-[0_0_15px_rgba(129,140,248,0.5)] transition-transform hover:scale-105">
-                        <Play v-if="!isPlaying" size="24" />
-                        <Pause v-else size="24" />
-                    </button>
-
-                    <button @click.stop="skipForward" class="text-white hover:text-indigo-300 mx-3 transition-colors">
-                        <SkipForward size="24" />
-                    </button>
-
-                    <button @click.stop="toggleRepeat" :class="{ 'text-indigo-400': isRepeatEnabled, 'text-gray-300': !isRepeatEnabled }" class="hover:text-white mx-3 transition-colors">
-                        <Repeat size="20" />
-                    </button>
-                </div>
-
-                <!-- Volume control -->
-                <div class="flex items-center px-4">
-                    <Volume2 class="text-gray-300 mr-2" size="16" />
-                    <input type="range" min="0" max="1" step="0.01" v-model="volume" @input="updateVolume" @click.stop class="w-full h-1 rounded-lg bg-white/20 appearance-none cursor-pointer focus:outline-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-indigo-500" />
-                </div>
-            </div>
+            <template v-if="!isCollapsed && !error && !(isLoading && tracks.length === 0)">
+                <PlayerExpanded :current-track="currentTrack" :is-loading="isLoading" :current-time="currentTime" :duration="duration" :progress-percentage="progressPercentage" :is-playing="isPlaying" :is-shuffle-enabled="isShuffleEnabled" :is-repeat-enabled="isRepeatEnabled" :volume="volume" @toggle-playlist="togglePlaylist" @seek-audio="seekAudio" @toggle-shuffle="toggleShuffle"
+                    @skip-back="skipBack" @toggle-play="togglePlay" @skip-forward="skipForward" @toggle-repeat="toggleRepeat" @update-volume="updateVolume" />
+            </template>
 
             <!-- Minimal Player UI - Only visible when collapsed -->
-            <div v-else-if="!error && !(isLoading && tracks.length === 0)" class="flex items-center p-3 w-full h-full">
-                <img :src="currentTrack.coverImage" class="w-11 h-11 rounded-md object-cover shadow-[0_0_10px_rgba(99,102,241,0.4)]" alt="Album Cover">
-                <div class="flex-1 mx-3 whitespace-nowrap overflow-hidden">
-                    <p class="text-sm font-bold text-white truncate">{{ currentTrack.title }}</p>
-                    <p class="text-xs text-white/70 truncate">{{ currentTrack.artist }}</p>
-                </div>
-                <div class="flex items-center mr-8">
-                    <button @click.stop="skipBack" class="text-white mx-1.5">
-                        <SkipBack size="18" />
-                    </button>
-                    <button @click.stop="togglePlay" class="bg-indigo-500/70 text-white rounded-full w-9 h-9 flex items-center justify-center mx-2 shadow-[0_0_10px_rgba(129,140,248,0.5)]">
-                        <Play v-if="!isPlaying" size="20" />
-                        <Pause v-else size="20" />
-                    </button>
-                    <button @click.stop="skipForward" class="text-white mx-1.5">
-                        <SkipForward size="18" />
-                    </button>
-                </div>
-            </div>
+            <template v-else-if="!error && !(isLoading && tracks.length === 0)">
+                <PlayerMinimal :current-track="currentTrack" :is-playing="isPlaying" @skip-back="skipBack" @toggle-play="togglePlay" @skip-forward="skipForward" />
+            </template>
         </div>
+
+        <!-- Playlist Overlay - Position based on mobile or desktop -->
+        <PlaylistOverlay v-if="isPlaylistOpen" :tracks="tracks" :current-track-index="currentTrackIndex" :is-mobile="isMobile" @close="togglePlaylist" @select-track="selectTrack" />
 
         <!-- Hidden audio element -->
         <audio ref="audioElement" preload="metadata" @timeupdate="onTimeUpdate" @loadedmetadata="onLoadedMetadata" @ended="onEnded" @error="onError"></audio>
@@ -140,9 +50,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { Play, Pause, SkipBack, SkipForward, Volume2, Shuffle, Repeat, ChevronDown, ChevronUp, Move, X, List, Menu } from 'lucide-vue-next';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
+import { ChevronDown, ChevronUp } from 'lucide-vue-next';
 import axios from 'axios';
+
+// Import child components
+import PlayerExpanded from './PlayerExpanded.vue';
+import PlayerMinimal from './PlayerMinimal.vue';
+import PlaylistOverlay from './PlaylistOverlay.vue';
 
 // State
 const audioElement = ref(null);
@@ -161,6 +76,7 @@ const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
 const error = ref(null);
 const playerRef = ref(null);
+const isMobile = ref(false);
 
 // Tracks data
 const tracks = ref([]);
@@ -201,7 +117,12 @@ const loadPlayerState = () => {
             const state = JSON.parse(savedState);
             volume.value = state.volume || 0.7;
             isCollapsed.value = state.isCollapsed !== undefined ? state.isCollapsed : true;
-            playerPosition.value = state.position || { x: 20, y: 20 };
+
+            // Nur Position laden, wenn nicht im Mobile-Modus
+            if (!isMobile.value) {
+                playerPosition.value = state.position || { x: 20, y: 20 };
+            }
+
             currentTrackIndex.value = state.currentTrackIndex || 0;
             isShuffleEnabled.value = state.isShuffleEnabled || false;
             isRepeatEnabled.value = state.isRepeatEnabled || false;
@@ -209,6 +130,11 @@ const loadPlayerState = () => {
     } catch (error) {
         console.error('Fehler beim Laden des Player-Status:', error);
     }
+};
+
+// Check if on mobile
+const checkMobile = () => {
+    isMobile.value = window.innerWidth < 768; // md breakpoint in Tailwind
 };
 
 // Tracks von der API laden
@@ -253,35 +179,10 @@ const togglePlay = () => {
     isPlaying.value = !isPlaying.value;
 };
 
-const onEnded = () => {
-    isPlaying.value = false;
-
-    if (isRepeatEnabled.value) {
-        // Wenn Repeat aktiviert ist, den aktuellen Track wiederholen
-        audioElement.value.currentTime = 0;
-        audioElement.value.play().catch(error => {
-            console.error("Fehler beim Wiederholen:", error);
-        });
-        isPlaying.value = true;
-    } else {
-        // Automatisch zum nächsten Track springen
-        const nextIndex = (currentTrackIndex.value + 1) % tracks.value.length;
-        loadTrack(nextIndex);
-
-        // Nach kurzem Delay abspielen, um dem Audio-Element Zeit zu geben
-        setTimeout(() => {
-            audioElement.value.play().catch(error => {
-                console.error("Fehler beim Abspielen des nächsten Tracks:", error);
-            });
-            isPlaying.value = true;
-        }, 100);
-    }
-};
-
-
 const loadTrack = async (index) => {
     if (index < 0 || index >= tracks.value.length) return;
 
+    // Log for debugging
     console.log(`Lade Track ${index + 1}/${tracks.value.length}: ${tracks.value[index].title}`);
 
     currentTrackIndex.value = index;
@@ -398,6 +299,30 @@ const onLoadedMetadata = () => {
     isLoading.value = false;
 };
 
+const onEnded = () => {
+    // Wir wissen, dass ein Track gerade zu Ende gespielt wurde
+    // Also sollte der nächste auch automatisch spielen
+
+    if (isRepeatEnabled.value) {
+        audioElement.value.currentTime = 0;
+        audioElement.value.play().catch(error => {
+            console.error("Fehler beim Wiederholen:", error);
+        });
+        isPlaying.value = true;
+    } else {
+        // Zum nächsten Track und automatisch abspielen
+        const nextIndex = (currentTrackIndex.value + 1) % tracks.value.length;
+        loadTrack(nextIndex);
+
+        setTimeout(() => {
+            audioElement.value.play().catch(error => {
+                console.error("Fehler beim Abspielen des nächsten Tracks:", error);
+            });
+            isPlaying.value = true;
+        }, 100);
+    }
+};
+
 const onError = (e) => {
     console.error("Audio-Fehler:", e);
     isPlaying.value = false;
@@ -418,7 +343,8 @@ const seekAudio = (event) => {
     audioElement.value.currentTime = duration.value * seekPosition;
 };
 
-const updateVolume = () => {
+const updateVolume = (newVolume) => {
+    volume.value = newVolume;
     audioElement.value.volume = volume.value;
     savePlayerState();
 };
@@ -428,7 +354,11 @@ const toggleCollapse = () => {
     savePlayerState();
 };
 
+// Dragging functionality - nur für Desktop
 const startDrag = (event) => {
+    // Nicht draggable auf Mobile
+    if (isMobile.value) return;
+
     // Ignoriere Drag auf interaktiven Elementen
     if (event.target.closest('button') || event.target.closest('input')) {
         return;
@@ -466,6 +396,10 @@ const endDrag = () => {
 
 // Lifecycle hooks
 onMounted(() => {
+    // Check mobile
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     // Lade gespeicherten Zustand
     loadPlayerState();
 
@@ -480,14 +414,32 @@ onMounted(() => {
     window.addEventListener('beforeunload', savePlayerState);
 });
 
-watch(volume, () => {
-    savePlayerState();
+// Aufräumen
+onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile);
+    window.removeEventListener('beforeunload', savePlayerState);
+
+    if (isDragging.value) {
+        document.removeEventListener('mousemove', onDrag);
+        document.removeEventListener('mouseup', endDrag);
+    }
 });
+
+// Export formatTime für andere Komponenten
+defineExpose({ formatTime });
 </script>
 
 <style scoped>
-/* Minimale CSS-Stile, die nicht gut mit Tailwind umsetzbar sind */
 .border-t-white {
     border-top-color: white;
+}
+
+/* Setze die spezifischen Mauszeiger-Stile */
+.cursor-grab {
+    cursor: grab;
+}
+
+.active\:cursor-grabbing:active {
+    cursor: grabbing;
 }
 </style>
