@@ -10,11 +10,10 @@ import BackgroundSlideshow from './components/BackgroundSlideshow.vue'; // Hinte
 </template>
 
 <style>
-/* Optional: Stile für die gesamte App */
+
 body {
   margin: 0;
   padding: 0;
   overflow: hidden;
-  /* Verhindert Scrollen */
 }
 </style>

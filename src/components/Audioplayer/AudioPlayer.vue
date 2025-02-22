@@ -1,4 +1,3 @@
-<!-- components/AudioPlayer/AudioPlayer.vue (Hauptkomponente) -->
 <template>
     <div ref="playerRef" class="fixed z-50 select-none" :class="{ 'w-full top-0 left-0': isMobile, 'cursor-grab active:cursor-grabbing': isDragging }" :style="isMobile ? {} : { left: playerPosition.x + 'px', top: playerPosition.y + 'px', maxWidth: '480px' }" @mousedown="startDrag">
 
@@ -26,7 +25,7 @@
             <!-- Global Loading State -->
             <div v-if="isLoading && tracks.length === 0" class="flex flex-col items-center justify-center py-8 px-6 min-h-[200px]">
                 <div class="w-8 h-8 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                <p class="mt-4 text-white text-center">Tracks werden geladen...</p>
+                <p class="mt-4 text-white text-center">Tracks are loading...</p>
             </div>
 
             <!-- Main Player UI - Only visible when not collapsed -->

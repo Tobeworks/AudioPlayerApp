@@ -1,4 +1,3 @@
-<!-- components/AudioPlayer/PlayerMinimal.vue -->
 <template>
     <div class="flex items-center p-3 w-full h-full">
         <img :src="currentTrack.coverImage" class="w-11 h-11 rounded-md object-cover shadow-[0_0_10px_rgba(99,102,241,0.4)]" alt="Album Cover">

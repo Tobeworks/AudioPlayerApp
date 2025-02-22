@@ -1,4 +1,4 @@
-<!-- components/AudioPlayer/PlaylistOverlay.vue -->
+
 <template>
     <!-- Mobile Playlist kommt von unten nach oben -->
     <div v-if="isMobile" class="fixed inset-x-0 bottom-0 z-20 transform transition-transform duration-300" :class="{ 'translate-y-0': show, 'translate-y-full': !show }">
@@ -77,7 +77,6 @@ const props = defineProps({
 
 defineEmits(['close', 'select-track']);
 
-// Verzögerung für Animation
 const show = ref(false);
 
 onMounted(() => {

@@ -1,4 +1,3 @@
-<!-- components/AudioPlayer/PlayerExpanded.vue -->
 <template>
     <div class="p-6">
         <!-- Header mit Player Titel -->
