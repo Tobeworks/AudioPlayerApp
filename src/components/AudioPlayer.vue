@@ -2,6 +2,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import { Play, Pause, SkipBack, SkipForward, Volume2, Shuffle, Repeat, ChevronDown, ChevronUp, Move } from 'lucide-vue-next';
+import axios from 'axios';
 
 // State
 const audioElement = ref(null);
@@ -18,84 +19,59 @@ const analyser = ref(null);
 const audioContext = ref(null);
 const audioSource = ref(null);
 const canvasContext = ref(null);
-const isLoading = ref(false);
+const isLoading = ref(true);
 const isCollapsed = ref(false);
 const playerPosition = ref({ x: 20, y: 20 });
 const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
+const error = ref(null);
 
 // Tracks data
-const tracks = [
-    {
-        id: 1,
-        title: "01 - Outland",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/01_outland.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 2,
-        title: "02 - New Arcadia",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/02_new%20arcadia.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 4,
-        title: "03 - Settlers",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/03_settlers02.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 5,
-        title: "04 - Metropolis",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/04_metropolis.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 6,
-        title: "05 - Horizon",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/05_horizon.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 8,
-        title: "06 - Meld",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/06_meld_02.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 10,
-        title: "07 - Tranquility",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/07_tranqility_02.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 12,
-        title: "08 - Artifacts",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/08_artifacts_02.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    },
-    {
-        id: 13,
-        title: "Thw Wanderers",
-        artist: "Logic Moon",
-        url: "https://tracks.logic-moon.de/audio/track_01.m4a",
-        coverImage: "https://tracks.logic-moon.de/covers/Music for Film Cover.jpg"
-    }
-];
+const tracks = ref([]);
+
+// API URL basierend auf Umgebung
+const apiUrl = import.meta.env.DEV
+    ? 'http://localhost:5000/tobeworks/audioplayer_tracks'
+    : 'https://twapi1-nr2qe7lb3q-oa.a.run.app/tobeworks/audioplayer_tracks';
 
 // Computed properties
-const currentTrack = computed(() => tracks[currentTrackIndex.value]);
+const currentTrack = computed(() => {
+    return tracks.value.length > 0 && currentTrackIndex.value < tracks.value.length
+        ? tracks.value[currentTrackIndex.value]
+        : { title: 'Kein Track geladen', artist: 'Unbekannt', coverImage: '' };
+});
+
 const progressPercentage = computed(() => {
     return duration.value ? (currentTime.value / duration.value) * 100 : 0;
 });
+
+// Tracks von der API laden
+const fetchTracks = async () => {
+    isLoading.value = true;
+    error.value = null;
+
+    try {
+        const response = await axios.get(apiUrl);
+
+        if (response.data && response.data.status === 1 && response.data.data) {
+            tracks.value = response.data.data;
+            console.log('Geladene Tracks:', tracks.value);
+
+            // Nach erfolgreichem Laden den ersten Track initialisieren
+            if (tracks.value.length > 0) {
+                await loadTrack(0);
+            }
+        } else {
+            error.value = 'Keine Tracks verfügbar';
+            console.error('API-Antwort enthält keine gültigen Daten:', response);
+            isLoading.value = false;
+        }
+    } catch (err) {
+        error.value = 'Fehler beim Laden der Tracks';
+        console.error('Fehler beim Abrufen der Tracks:', err);
+        isLoading.value = false;
+    }
+};
 
 // Methods
 const togglePlay = () => {
@@ -112,7 +88,7 @@ const togglePlay = () => {
 };
 
 const loadTrack = async (index) => {
-    if (index < 0 || index >= tracks.length) return;
+    if (index < 0 || index >= tracks.value.length) return;
 
     currentTrackIndex.value = index;
     currentTime.value = 0;
@@ -129,7 +105,7 @@ const loadTrack = async (index) => {
     if (audioElement.value) {
         audioElement.value.pause();
         audioElement.value.currentTime = 0;
-        audioElement.value.src = currentTrack.value.url;
+        audioElement.value.src = tracks.value[index].url;
     }
 
     // Preload the audio
@@ -208,10 +184,12 @@ const toggleVisualizer = () => {
 };
 
 const skipForward = () => {
+    if (tracks.value.length === 0) return;
+
     if (isShuffleEnabled.value) {
         playRandomTrack();
     } else {
-        const nextIndex = (currentTrackIndex.value + 1) % tracks.length;
+        const nextIndex = (currentTrackIndex.value + 1) % tracks.value.length;
         loadTrack(nextIndex);
         if (isPlaying.value) {
             setTimeout(() => {
@@ -224,6 +202,8 @@ const skipForward = () => {
 };
 
 const skipBack = () => {
+    if (tracks.value.length === 0) return;
+
     // If we're more than 3 seconds into the song, go back to the start
     if (currentTime.value > 3) {
         audioElement.value.currentTime = 0;
@@ -233,7 +213,7 @@ const skipBack = () => {
     if (isShuffleEnabled.value) {
         playRandomTrack();
     } else {
-        const prevIndex = (currentTrackIndex.value - 1 + tracks.length) % tracks.length;
+        const prevIndex = (currentTrackIndex.value - 1 + tracks.value.length) % tracks.value.length;
         loadTrack(prevIndex);
         if (isPlaying.value) {
             setTimeout(() => {
@@ -246,7 +226,9 @@ const skipBack = () => {
 };
 
 const playRandomTrack = () => {
-    const randomIndex = Math.floor(Math.random() * tracks.length);
+    if (tracks.value.length === 0) return;
+
+    const randomIndex = Math.floor(Math.random() * tracks.value.length);
     loadTrack(randomIndex);
     if (isPlaying.value) {
         setTimeout(() => {
@@ -365,9 +347,10 @@ const endDrag = () => {
 onMounted(() => {
     if (audioElement.value) {
         audioElement.value.volume = volume.value;
-        // Automatisches Laden des ersten Tracks beim Start
-        loadTrack(0);
     }
+
+    // Tracks von der API laden
+    fetchTracks();
 });
 </script>
 
@@ -383,6 +366,18 @@ onMounted(() => {
             <div class="collapse-toggle" @click="toggleCollapse">
                 <ChevronDown v-if="!isCollapsed" size="20" class="text-white" />
                 <ChevronUp v-else size="20" class="text-white" />
+            </div>
+
+            <!-- Error Message -->
+            <div v-if="error" class="error-message">
+                <p>{{ error }}</p>
+                <button @click="fetchTracks" class="retry-button">Erneut versuchen</button>
+            </div>
+
+            <!-- Global Loading State -->
+            <div v-if="isLoading && tracks.length === 0" class="global-loading">
+                <div class="loading-spinner"></div>
+                <p class="mt-4 text-white text-center">Tracks werden geladen...</p>
             </div>
 
             <!-- Playlist Overlay -->
@@ -412,7 +407,7 @@ onMounted(() => {
             </div>
 
             <!-- Main Player UI - Only visible when not collapsed -->
-            <div v-if="!isCollapsed" class="player-content">
+            <div v-if="!isCollapsed && !error && !(isLoading && tracks.length === 0)" class="player-content">
                 <div class="flex items-center justify-between mb-4">
                     <button @click="togglePlaylist" class="text-white hover:text-indigo-300 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -420,11 +415,11 @@ onMounted(() => {
                         </svg>
                     </button>
                     <h2 class="text-xl font-bold text-white">Logic Moon</h2>
-                     <button @click="toggleVisualizer" class="text-white hover:text-indigo-300 transition">
+                    <button @click="toggleVisualizer" class="text-white hover:text-indigo-300 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
-                    </button> 
+                    </button>
                 </div>
 
                 <div class="flex justify-center mb-6">
@@ -487,7 +482,7 @@ onMounted(() => {
             </div>
 
             <!-- Minimal Player UI - Only visible when collapsed -->
-            <div v-else class="mini-player">
+            <div v-else-if="!error && !(isLoading && tracks.length === 0)" class="mini-player">
                 <img :src="currentTrack.coverImage" class="mini-cover" alt="Album Cover">
                 <div class="mini-info">
                     <p class="mini-title">{{ currentTrack.title }}</p>
@@ -714,13 +709,49 @@ input[type=range]::-webkit-slider-thumb {
     box-shadow: 0 0 5px rgba(129, 140, 248, 0.7);
 }
 
+/* New styles for error and global loading states */
+.error-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    text-align: center;
+    height: 100%;
+    min-height: 200px;
+}
+
+.error-message p {
+    color: #f87171;
+    margin-bottom: 1rem;
+}
+
+.retry-button {
+    background: rgba(129, 140, 248, 0.7);
+    color: white;
+    border-radius: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    transition: all 0.3s;
+}
+
+.retry-button:hover {
+    background: rgba(129, 140, 248, 0.9);
+}
+
+.global-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    height: 100%;
+    min-height: 200px;
+}
+
 @keyframes spin {
     to {
         transform: rotate(360deg);
     }
 }
-
-
-
-
 </style>
