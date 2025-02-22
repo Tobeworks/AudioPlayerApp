@@ -253,8 +253,36 @@ const togglePlay = () => {
     isPlaying.value = !isPlaying.value;
 };
 
+const onEnded = () => {
+    isPlaying.value = false;
+
+    if (isRepeatEnabled.value) {
+        // Wenn Repeat aktiviert ist, den aktuellen Track wiederholen
+        audioElement.value.currentTime = 0;
+        audioElement.value.play().catch(error => {
+            console.error("Fehler beim Wiederholen:", error);
+        });
+        isPlaying.value = true;
+    } else {
+        // Automatisch zum nächsten Track springen
+        const nextIndex = (currentTrackIndex.value + 1) % tracks.value.length;
+        loadTrack(nextIndex);
+
+        // Nach kurzem Delay abspielen, um dem Audio-Element Zeit zu geben
+        setTimeout(() => {
+            audioElement.value.play().catch(error => {
+                console.error("Fehler beim Abspielen des nächsten Tracks:", error);
+            });
+            isPlaying.value = true;
+        }, 100);
+    }
+};
+
+
 const loadTrack = async (index) => {
     if (index < 0 || index >= tracks.value.length) return;
+
+    console.log(`Lade Track ${index + 1}/${tracks.value.length}: ${tracks.value[index].title}`);
 
     currentTrackIndex.value = index;
     currentTime.value = 0;
@@ -370,20 +398,6 @@ const onLoadedMetadata = () => {
     isLoading.value = false;
 };
 
-const onEnded = () => {
-    isPlaying.value = false;
-
-    if (isRepeatEnabled.value) {
-        audioElement.value.currentTime = 0;
-        audioElement.value.play().catch(error => {
-            console.error("Fehler beim Wiederholen:", error);
-        });
-        isPlaying.value = true;
-    } else {
-        skipForward(); // Automatisch zum nächsten Track
-    }
-};
-
 const onError = (e) => {
     console.error("Audio-Fehler:", e);
     isPlaying.value = false;
@@ -414,7 +428,6 @@ const toggleCollapse = () => {
     savePlayerState();
 };
 
-// Dragging functionality - Verbessert für die gesamte Fläche
 const startDrag = (event) => {
     // Ignoriere Drag auf interaktiven Elementen
     if (event.target.closest('button') || event.target.closest('input')) {
